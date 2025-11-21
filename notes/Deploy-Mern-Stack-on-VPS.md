@@ -397,6 +397,77 @@ sudo systemctl restart nginx
 
 ##
 
+### 🔹 FRONTEND & BACKEND SETUP 
+
+**Nginx config**
+
+```bash
+sudo nano /etc/nginx/sites-available/your-domain.com.conf
+```
+
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com www.your-domain.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name your-domain.com www.your-domain.com;
+
+    ssl_certificate /etc/letsencrypt/live/your-domain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/your-domain.com/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+   # --- Express backend API ---
+    location /api/ {
+        proxy_pass http://localhost:5000;
+
+        # Disable caching to ensure fresh content
+        proxy_no_cache 1;
+        proxy_cache_bypass 1;
+
+        # cache-control headers to prevent caching at the client side
+        add_header Cache-Control no-cache, no-store, must-revalidate;
+        add_header Pragma no-cache;
+        add_header Expires 0;
+
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # Frontend (Next.js)
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+```
+
+**Enable sites & restart Nginx**
+
+```bash
+sudo ln -s /etc/nginx/sites-available/your-domain.com.conf /etc/nginx/sites-enabled/
+```
+
+```bash
+sudo nginx -t
+```
+
+```bash
+sudo systemctl restart nginx
+```
+##
+
 ## ⚙️ Useful PM2 Commands
 
 | Command                  | Description                |
